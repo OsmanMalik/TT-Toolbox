@@ -109,13 +109,13 @@ for i=1:2:length(varargin)-1
             numblocks = varargin{i+1};            
         otherwise
             error('Unknown tuning parameter "%s"', varargin{i});
-    end;
-end;
+    end
+end
 
 % Extract the dimensions
 if (~isa(A, 'tt_matrix'))
     error('A must be given in a tt_matrix class');
-end;
+end
 d = A.d;
 n = A.n;
 % Initialize from random initial state if not passed otherwise
@@ -124,20 +124,20 @@ if (isempty(x))
 else
     if (~isa(x, 'tt_tensor'))
         error('x0 must be given in a tt_tensor class');
-    end;
+    end
     if (x.d~=d)
         error('Inconsistent dim(A) and dim(x0)');
-    end;
+    end
     if (any(x.n~=n))
         error('Inconsistent size(A) and size(x0)');
-    end;
-end;
+    end
+end
 
 % Disable MEX if it does not exist
 if (usemex)&&(exist('eig3d_primme', 'file')<2)
     warning('MEX local solver is not found, disabled');
     usemex = false;
-end;
+end
 
 % More housekeeping
 ra = A.r;
@@ -146,7 +146,7 @@ if (rx(d+1)>1)
     % Leave only the first component from the initial guess
     x = x*eye(rx(d+1),1);
     rx(d+1) = 1;
-end;
+end
 crA = core2cell(A);
 crx = core2cell(x);
 
@@ -179,19 +179,19 @@ for i=d:-1:2
     if (usemex)&&(~isreal(phixax{i}))
         warning('Complex data detected, turning MEX local solver off');
         usemex = false;
-    end;
-end;
+    end
+end
 % Initial guess for EVs
 theta = rightreduce_matrix(phixax(2), crx{1}, crA(1), crx{1}, rx(1),n(1),rx(1+1), 1,ra(1),ra(1+1), rx(1),n(1),rx(1+1));
 theta = squeeze(theta{1});
 if (usemex)&&(~isreal(theta))
     warning('Complex data detected, turning MEX local solver off');
     usemex = false;
-end;
+end
 theta = diag(theta);
 if (b>1)
     crx{1} = randn(rx(1), n(1), rx(2), b);
-end;
+end
 
 % DMRG sweeps
 swp = 1;
@@ -262,7 +262,7 @@ while (swp<=nswp)||(dir>0)
             rx2 = n(i+1)*rx(i+2);
             ra1 = ra(i);
             ra2 = ra(i+1);
-        end;
+        end
         % sol_prev. It is also an initial guess.
         if (dir>0)
             sol_prev = reshape(crx{i}, rx(i)*n(i)*rx(i+1), b);
@@ -275,8 +275,8 @@ while (swp<=nswp)||(dir>0)
             sol_prev = reshape(crx{i+1}, rx(i+1), n(i+1)*rx(i+2)*b);
             sol_prev = reshape(crx{i}, rx(i)*n(i), rx(i+1))*sol_prev;
             sol_prev = reshape(sol_prev, rx(i)*n(i)*n(i+1)*rx(i+2), b);
-        end;
-    end;
+        end
+    end
     
     % Initial residual
     res_prev = norm(local_matvec(sol_prev, rx1,nloc,rx2,b, rx1,nloc,rx2, Phi1, A1, Phi2, 1,ra1,ra2)-sol_prev*diag(theta));
@@ -305,8 +305,8 @@ while (swp<=nswp)||(dir>0)
         else
             [sol,theta,~,lambdaHistory]=lobpcg(sol_prev,@(x)local_matvec(x, rx1,nloc,rx2,[], rx1,nloc,rx2, Phi1, A1, Phi2, 1,ra1,ra2),  real_tol, local_iters);
             num_matvecs = numel(lambdaHistory);
-        end;
-    end;
+        end
+    end
     
     % count the number of MatVecs
     max_matvecs = max(max_matvecs, num_matvecs);
@@ -314,7 +314,7 @@ while (swp<=nswp)||(dir>0)
     if (~strcmp(trunc_norm, 'fro'))
         % We need the new residual for the corresp. trunc. strategy
         res_new = norm(local_matvec(sol, rx1,nloc,rx2,b, rx1,nloc,rx2, Phi1, A1, Phi2, 1,ra1,ra2)-sol*diag(theta));
-    end;
+    end
 
     % L2-norm convergence check. 
     dx = norm(sol*(sol'*sol_prev)-sol_prev);
@@ -328,7 +328,7 @@ while (swp<=nswp)||(dir>0)
                 sol = reshape(sol, rx(i)*n(i), n(i+1)*rx(i+2)*b);
             else
                 sol = reshape(sol, rx(i)*n(i), rx(i+1)*b);
-            end;
+            end
         else
             sol = sol.';
             if (numblocks==2)
@@ -336,8 +336,8 @@ while (swp<=nswp)||(dir>0)
                 sol = reshape(sol, b*rx(i)*n(i), n(i+1)*rx(i+2));
             else
                 sol = reshape(sol, b*rx(i), n(i)*rx(i+1));
-            end;
-        end;
+            end
+        end
         
         [ux,s,vx]=svd(sol, 'econ');
         s = diag(s);
@@ -354,13 +354,13 @@ while (swp<=nswp)||(dir>0)
             else
                 cursol = reshape(cursol, b, rx1*nloc*rx2);
                 cursol = cursol.';
-            end;
+            end
             res = norm(local_matvec(cursol, rx1,nloc,rx2,b, rx1,nloc,rx2, Phi1, A1, Phi2, 1,ra1,ra2)-cursol*diag(theta));
             if (res<max(real_tol, res_new)*resid_damp)
                 drank = -1; % rank is overestimated; decrease
             else
                 drank = 1; % residual is large; increase the rank
-            end;
+            end
             while (r>0)&&(r<=numel(s))
                 cursol = ux(:,1:r)*diag(s(1:r))*vx(:,1:r)';
                 if (dir>0)
@@ -368,31 +368,31 @@ while (swp<=nswp)||(dir>0)
                 else
                     cursol = reshape(cursol, b, rx1*nloc*rx2);
                     cursol = cursol.';
-                end;
+                end
                 res = norm(local_matvec(cursol, rx1,nloc,rx2,b, rx1,nloc,rx2, Phi1, A1, Phi2, 1,ra1,ra2)-cursol*diag(theta));
                 if (drank>0)
                     if (res<max(real_tol, res_new)*resid_damp)
                         break;
-                    end;
+                    end
                 else
                     if (res>=max(real_tol, res_new)*resid_damp)
                         break;
-                    end;
-                end;
+                    end
+                end
                 r = r+drank;
-            end;
+            end
             if (drank<0)
                 r=r+1;
-            end;
-        end;
+            end
+        end
         
         r = min(r, numel(s));
         r = min(r, rmax);
         
         if (verb==2)
             fprintf('=dmrg_eig= swp=%d, block=%d, dx=%3.3e, r=%d\n', swp, i, dx, r);
-        end;
-    end;
+        end
+    end
     
     if (dir>0)&&(i<d) % Forward sweep
         ux = ux(:,1:r);
@@ -406,7 +406,7 @@ while (swp<=nswp)||(dir>0)
             [ux,rv]=qr([ux,zx], 0);
             rv = rv(:,1:r);
             vx = vx*rv.';
-        end;
+        end
         
         r = size(ux, 2);
         
@@ -422,7 +422,7 @@ while (swp<=nswp)||(dir>0)
             % Replace the next core by vx
             cr2 = vx.';            
             cr2 = reshape(cr2, r, n(i+1), rx(i+2), b);
-        end;
+        end
         
         % Stuff them back
         rx(i+1) = r;
@@ -441,13 +441,13 @@ while (swp<=nswp)||(dir>0)
                 zx = randn(n(i)*rx(i+1), kickrank);
             else
                 zx = randn(n(i+1)*rx(i+2), kickrank);
-            end;
+            end
             % Concatenate the bases and reinforce the gauges.
             % In future: insert symmetries here?
             [vx,rv]=qr([vx,zx], 0);
             rv = rv(:,1:r);
             ux = ux*rv.';
-        end;
+        end
         
         r = size(vx, 2);
         
@@ -478,12 +478,12 @@ while (swp<=nswp)||(dir>0)
             crx{i} = reshape(ux, rx(i), n(i), r, b);
             % Compute new reductions
             phixax(i+1) = rightreduce_matrix(phixax(i+2), vx, crA(i+1), vx, rx(i+1),n(i+1),rx(i+2), 1,ra(i+1),ra(i+2), rx(i+1),n(i+1),rx(i+2));
-        end;
+        end
     else
         % Just stuff back the last core
         sol = reshape(sol, rx(i), n(i), rx(i+1), b);
         crx{i} = sol;
-    end;
+    end
     
     if (verb>2)
         % Report the debug data if necessary
@@ -494,7 +494,7 @@ while (swp<=nswp)||(dir>0)
                 testdata{3}(i,swp) = dx;
             else
                 testdata{3}(i,swp) = res_prev;
-            end;
+            end
         else
             testdata{1}(d-numblocks+2-i,swp) = toc(t_dmrg_eig);
             testdata{2}(d-numblocks+2-i,swp,:) = theta;
@@ -502,9 +502,9 @@ while (swp<=nswp)||(dir>0)
                 testdata{3}(d-numblocks+2-i,swp) = dx;
             else
                 testdata{3}(d-numblocks+2-i,swp) = res_prev;
-            end;
-        end;
-    end;
+            end
+        end
+    end
     
     i = i+dir;
     
@@ -513,18 +513,18 @@ while (swp<=nswp)||(dir>0)
         % Report all
         if (verb>0)
             fprintf('=dmrg_eig= sweep %d, max_dx: %3.3e, max_res: %3.3e, erank: %g, theta: %3.15e, mv: %d\n', swp, max_dx, max_res, sqrt(rx(1:d)'*(n.*rx(2:d+1))/sum(n)), sum(theta), max_matvecs);
-        end;
+        end
         
         % Check the stops
         if (strcmp(trunc_norm, 'fro'))
             if (max_dx<tol_exit)&&(verb<3)&&(dir>0)
                 break;
-            end;
+            end
         else
             if (max_res<tol_exit)&&(verb<3)&&(dir>0)
                 break;
-            end;
-        end;
+            end
+        end
         
         swp = swp+1;
         % Go backward
@@ -534,8 +534,8 @@ while (swp<=nswp)||(dir>0)
         max_dx = 0;
         max_res = 0;
         max_matvecs = 0;
-    end;
-end;
+    end
+end
 
 crx{d} = reshape(crx{d}, rx(d), n(d), b);
 x = cell2core(tt_tensor, crx);
@@ -563,7 +563,7 @@ for k=1:Ra
     WAX2{k} = xc.'*WAX2{k}; % size rx2, ra2 rw2
     WAX2{k} = reshape(WAX2{k}, rx2*ra2(k), rw2);
     WAX2{k} = WAX2{k}.';
-end;
+end
 end
 
 % Accumulates the right reduction W{k:d}'*A{k:d}*X{k:d}
@@ -587,7 +587,7 @@ for k=1:Ra
     WAX1{k} = wc*WAX1{k}; % size rw1, rx1 ra1
     WAX1{k} = reshape(WAX1{k}, rw1*rx1, ra1(k));
     WAX1{k} = WAX1{k}.';
-end;
+end
 end
 
 % A matrix-vectors product for the matrix in the 3D TT (WAX1-A-WAX2), and
@@ -596,7 +596,7 @@ function [w]=local_matvec(x, rx1,m,rx2,b, rw1,n,rw2, WAX1, A, WAX2, Ra,ra1,ra2)
 xc = reshape(x, rx1*m*rx2, []);
 if (isempty(b))
     b = size(xc, 2);
-end;
+end
 w = zeros(rw1*n*rw2, b);
 xc = xc.';
 xc = reshape(xc, b*rx1*m, rx2);
@@ -615,7 +615,7 @@ for k=1:Ra
     wk = tmp*wk;
     wk = reshape(wk, rw1*n*rw2, b);
     w = w+wk;
-end;
+end
 end
 
 % Builds the full (rw1*n*rw2) x (rx1*m*rx2) matrix from its TT blocks
@@ -625,8 +625,8 @@ sparseflag = true;
 for k=1:Ra
     if (~issparse(A{k}))
         sparseflag=false;
-    end;
-end;
+    end
+end
 if (sparseflag)
     B = sparse(rw2*rw1*n, rx2*rx1*m); % reverse order !!!
     % The reverse order is needed since usually the n x m part is large and
@@ -640,7 +640,7 @@ if (sparseflag)
         Bk = kron(Bk, tmp); % mind endiannes
         Bk = kron(A{k}, Bk); % mind endiannes
         B = B+Bk;
-    end;
+    end
 else
     % There are dense blocks, everything is dense, and in the natural index
     % order
@@ -651,7 +651,7 @@ else
         if (issparse(tmp))
             % Don't mix sparse if we are already full
             tmp = full(tmp);
-        end;
+        end
         Bk = Bk*tmp;
         Bk = reshape(Bk, rw1, rx1, n, m*ra2(k));
         Bk = permute(Bk, [1,3,2,4]);
@@ -662,7 +662,7 @@ else
         Bk = permute(Bk, [1,3,2,4]);
         Bk = reshape(Bk, rw1*n*rw2, rx1*m*rx2);
         B = B+Bk;
-    end;
-end;
+    end
+end
 end
 
